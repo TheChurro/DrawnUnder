@@ -249,7 +249,7 @@ MonoBehaviour:
   supported: 0
   sliding: 0
   supportNormal: {x: 0, y: 0}
-  inAirFor: 0
+  airtimeStart: 0
   wallOnLeft: 0
   wallOnRight: 0
   times: []
@@ -266,9 +266,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   speed: 5
+  maxJumpHeight: 4
+  minJumpHeight: 2
+  jumpTime: 0.25
   timeToReachSpeed: 0.01
   maxJerk: 10
-  gravity: 9
+  maxGravity: 0
+  minGravity: 0
+  jumpSpeed: 0
+  jumpWindow: 0.01
+  coyoteTime: 0.01
 --- !u!212 &604593777
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -437,13 +444,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 904986949}
-  m_LocalRotation: {x: -0, y: -0, z: -0.5431146, w: 0.83965856}
-  m_LocalPosition: {x: -3.73, y: -0.84, z: 0}
+  m_LocalRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
+  m_LocalPosition: {x: -3.5, y: -0.84, z: 0}
   m_LocalScale: {x: 6.0315, y: 1.47, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 2
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: -65.792}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 90}
 --- !u!1 &1214875854
 GameObject:
   m_ObjectHideFlags: 0
@@ -656,7 +663,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1281702144}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.94, y: 2.08, z: 0}
+  m_LocalPosition: {x: 2.88, y: 0.77, z: 0}
   m_LocalScale: {x: 6.0315, y: 1.47, z: 1}
   m_Children: []
   m_Father: {fileID: 0}

@@ -16,7 +16,7 @@ public class RayMover : MonoBehaviour
     public bool supported;
     public bool sliding;
     public Vector2 supportNormal;
-    public float inAirFor;
+    public float airtimeStart;
     public bool wallOnLeft;
     public bool wallOnRight;
 
@@ -36,7 +36,11 @@ public class RayMover : MonoBehaviour
             Vector2 displacement = (velocity + netForce * time) * time;
             if (supported)
             {
-                displacement -= Vector2.Dot(displacement, supportNormal) * supportNormal;
+                float normalMovement = Vector2.Dot(displacement, supportNormal);
+                if (normalMovement < 0) // Moving into the platform we are supported by.
+                {
+                    displacement -= normalMovement * supportNormal;
+                }
             }
             if (CastAndMove(displacement, netForce, ref time))
             {
@@ -87,10 +91,12 @@ public class RayMover : MonoBehaviour
             supportNormal = hit.normal;
             transform.position += (Vector3)(forceDirection.normalized * hit.distance);
             velocity -= supportNormal * Vector2.Dot(supportNormal, velocity);
-            sliding = Vector2.Dot(hit.normal, -forceDirection) < maxSlopeCos;
+            sliding = Vector2.Dot(hit.normal, -forceDirection.normalized) < maxSlopeCos;
         }
         else
         {
+            if (supported)
+                airtimeStart = Time.time;
             supported = false;
         }
     }
@@ -176,5 +182,10 @@ public class RayMover : MonoBehaviour
     {
         Vector2 left = Left(netForce);
         return left * Vector2.Dot(left, velocity);
+    }
+
+    public float TimeInAir()
+    {
+        return Supported() ? 0.0f : Time.time - airtimeStart;
     }
 }
