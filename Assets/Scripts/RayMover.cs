@@ -43,7 +43,6 @@ public class RayMover : MonoBehaviour
                 break;
             }
             times[i] = time;
-            print($"Cast And Move {i}");
         }
     }
 

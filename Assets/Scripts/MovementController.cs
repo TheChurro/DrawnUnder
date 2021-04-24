@@ -28,11 +28,9 @@ public class MovementController : MonoBehaviour
         if (!mover.Sliding())
         {
             Vector2 desiredMovement = controls.Gameplay.Move.ReadValue<Vector2>();
-            //desiredMovement.x = 1.0f;
             Vector2 perpVelocity = mover.PerpendicularVelocity(Vector2.down);
             Vector2 desiredPerpVelocity = Vector2.SmoothDamp(perpVelocity, -mover.Left(Vector2.down) * speed * desiredMovement.x, ref movementDampVelocity, timeToReachSpeed, maxJerk);
             mover.velocity += desiredPerpVelocity - perpVelocity;
-            print($"Left: {mover.Left(Vector2.down)} | Desired Movement: {desiredMovement.x}");
         }
         mover.Move(Time.fixedDeltaTime, Vector2.down * gravity);
     }
