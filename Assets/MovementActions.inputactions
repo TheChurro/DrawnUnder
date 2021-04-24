@@ -90,6 +90,90 @@
                     "isPartOfComposite": false
                 }
             ]
+        },
+        {
+            "name": "Recording",
+            "id": "065a7f4f-3118-408e-bc60-125bd8204d33",
+            "actions": [
+                {
+                    "name": "Record",
+                    "type": "Button",
+                    "id": "c6ff84fd-5b3f-4409-a64c-5d191955b14e",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": ""
+                },
+                {
+                    "name": "Play",
+                    "type": "Button",
+                    "id": "846161f0-8d0e-42b2-886d-3581a980717d",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": ""
+                },
+                {
+                    "name": "Advance",
+                    "type": "Button",
+                    "id": "61fd8268-a533-45a6-8549-860a8e6cfab1",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": ""
+                },
+                {
+                    "name": "Reverse",
+                    "type": "Button",
+                    "id": "0b0a76a1-0f22-418a-b55a-94383326b934",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": ""
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "b2dbff1f-4a53-4ffc-a08b-e58292d58898",
+                    "path": "<Keyboard>/r",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Record",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "37d40a51-1a47-4e15-a062-0a00b16a5d94",
+                    "path": "<Keyboard>/p",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Play",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "1f82aeb2-e8ae-45f9-be6e-7ca0a6730496",
+                    "path": "<Keyboard>/rightArrow",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Advance",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "d08b0b4c-4f58-4d81-8e64-dbddc4cfad51",
+                    "path": "<Keyboard>/leftArrow",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Reverse",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
         }
     ],
     "controlSchemes": []
