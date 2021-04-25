@@ -8,8 +8,7 @@ public struct MovementControllerSettings
     #region Run Settings
     public float baseSpeed;
     public float bailSpeed;
-    public float startAcceleration;
-    public float maxBaseRunAcceleration;
+    public float accelerationTime;
     public float skidSpeed;
     public float stopSkiddingSpeed;
     public float maxBaseSkidAcceleration;
@@ -51,9 +50,8 @@ public struct MovementControllerSettings
         //       acceleration = k (Max / 2) * .5 = k Max / 4
         // Therefore the power of our acceleration and deceleration can be given by
         //      k = (4 acceleration) / Max
-        vars.rampupPower = (4 * maxBaseRunAcceleration) / baseSpeed;
+        vars.baseAcceleration = baseSpeed / accelerationTime;
         vars.skidPower = (4 * maxBaseSkidAcceleration) / baseSpeed;
-        vars.baseAcceleration = startAcceleration;
         vars.skidSpeed = skidSpeed;
         vars.skidMaxControl = skidMaxControl;
         vars.skidMinControl = skidMinControl;
@@ -138,7 +136,7 @@ public struct RunVars
         }
         float moveDegree = Mathf.Abs(moveInput);
         float speedDegree = speed * invBaseSpeed;
-        if (speed > skidSpeed && (moveDegree < Mathf.Epsilon || Mathf.Sign(moveInput) != Mathf.Sign(currentVelocity)))
+        if (speed > skidSpeed && moveDegree > Mathf.Epsilon && Mathf.Sign(moveInput) != Mathf.Sign(currentVelocity))
         {
             skidDirection = Mathf.Sign(currentVelocity);
             isSkidding = true;
@@ -151,18 +149,12 @@ public struct RunVars
             return currentVelocity + acceleration * Time.fixedDeltaTime;
         }
 
-        float inputIntent = (2 * (moveDegree - 0.5f));
-        if (speedDegree > 1)
-        {
-            inputIntent = 1;
-        }
+        float target = moveInput * baseSpeed;
+        float targetChange = target - currentVelocity;
+        float currentChange = baseAcceleration * Time.fixedDeltaTime;
+        float actualChange = Mathf.Sign(targetChange) * Mathf.Min(Mathf.Abs(targetChange), currentChange);
 
-        // Get logistic acceleation so that a nuetral input is treated as slowing down.
-        float nonLinearVelChange = (rampupPower * inputIntent * currentVelocity * (1 - speedDegree)) * Time.fixedDeltaTime;
-        float linearUpdate = Mathf.Lerp(currentVelocity, moveInput * baseSpeed, baseAcceleration * Time.fixedDeltaTime / baseSpeed);
-        Debug.Log($"Velocity {currentVelocity} | Linear Target {linearUpdate} | Non Linear Vel Change: {nonLinearVelChange} | Degree {1 - speedDegree} | Intent {inputIntent}");
-
-        return Mathf.Lerp(linearUpdate, currentVelocity + nonLinearVelChange, speedDegree);
+        return currentVelocity + actualChange;
     }
 }
 

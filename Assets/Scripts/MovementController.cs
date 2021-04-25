@@ -103,7 +103,6 @@ public class MovementController : MonoBehaviour
     public void BeginBackWallRun()
     {
         wallRun.runningOnBackWall = true;
-        wallRun.canRunOnBackWall = false;
     }
 
     public void BeginFrontWallRun()
@@ -134,7 +133,7 @@ public class MovementController : MonoBehaviour
         float input = controls.Gameplay.Jump.ReadValue<float>();
         float activeGravity = Mathf.Lerp(jump.maxGravity, jump.minGravity, input);
         Vector2 desiredMovement = controls.Gameplay.Move.ReadValue<Vector2>();
-        bool doWallRun = wallRun.speedNeddedForRun <= mover.velocity.magnitude;
+        bool doWallRun = wallRun.speedNeddedForRun <= Mathf.Abs(mover.velocity.x);
 
         if (!doWallRun)
         {
@@ -150,15 +149,7 @@ public class MovementController : MonoBehaviour
         {
             float perpVelocity = -mover.PerpendicularVelocity(Vector2.down);
             float newVelocity = run.GetVelocity(perpVelocity, desiredMovement.x, mover.Supported());
-            if (mover.velocity.magnitude > run.baseSpeed)
-            {
-                print("Hit the bad case");
-            }
             SetVelocityComponent(-mover.Left(Vector2.down), newVelocity);
-            if (mover.velocity.magnitude > run.baseSpeed)
-            {
-                print("Hit the bad case");
-            }
 
             if (doWallRun && mover.GetClingableWall() != RayMover.WallDirection.None)
             {
@@ -238,6 +229,8 @@ public class MovementController : MonoBehaviour
                 if (wallRun.runningOnBackWall)
                 {
                     JumpTowards(desiredMovement.normalized, jump.launchSpeed, true);
+                    wallRun.canRunOnBackWall = false;
+                    DropWallRun();
                 }
                 else
                 {
