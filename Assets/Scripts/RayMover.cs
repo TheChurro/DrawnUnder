@@ -46,12 +46,14 @@ public class DebugData
     public Dictionary<DebugTag, List<RaycastInfo>> castInfo = new Dictionary<DebugTag, List<RaycastInfo>>();
     public List<SupportInfo> supports = new List<SupportInfo>();
     public List<RecordInfo> positions = new List<RecordInfo>();
+    public List<TransferRecord> momentumTransferRecord = new List<TransferRecord>();
     private int index = 0;
     public void Clear()
     {
         castInfo.Clear();
         supports.Clear();
         positions.Clear();
+        momentumTransferRecord.Clear();
     }
     public void Insert(DebugTag tag, RaycastInfo info)
     {
@@ -69,6 +71,18 @@ public class DebugData
         positions.Add(new RecordInfo(){
             record = record,
             index = index,
+        });
+    }
+    public void MarkMomentumTransfer(Vector2 oldNormal, Vector2 newNormal, Vector2 oldPerp, Vector2 newPerp, bool flipped, Vector2 oldVelocityTowardsNewPerp)
+    {
+        momentumTransferRecord.Add(new TransferRecord() {
+            index = index,
+            oldNormal = oldNormal,
+            newNormal = newNormal,
+            oldPerp = oldPerp,
+            newPerp = newPerp,
+            flipped = flipped,
+            oldVelocityTowardsNewPerp = oldVelocityTowardsNewPerp,
         });
     }
     public void SetIndex(int i)
@@ -91,6 +105,15 @@ public class DebugData
     }
     public struct RecordInfo {
         public RayMover.Record record;
+        public int index;
+    }
+    public struct TransferRecord {
+        public Vector2 oldNormal;
+        public Vector2 newNormal;
+        public Vector2 oldPerp;
+        public Vector2 newPerp;
+        public Vector2 oldVelocityTowardsNewPerp;
+        public bool flipped;
         public int index;
     }
 }
@@ -139,6 +162,7 @@ public class RayMover : MonoBehaviour
         public Vector2 velocity;
         public bool supported;
         public bool sliding;
+        public bool allowWallRunning;
         public Vector2 supportNormal;
         public Vector2 netForce;
         public Vector3 position;
@@ -150,12 +174,13 @@ public class RayMover : MonoBehaviour
     private int playbackIndex;
     private int dataIndex = -2;
 
-    private Record MakeRecord(Vector2 netForce, float time)
+    private Record MakeRecord(Vector2 netForce, float time, bool allowWallRunning)
     {
         return new Record() {
             velocity = velocity,
             supported = supported,
             sliding = sliding,
+            allowWallRunning = allowWallRunning,
             supportNormal = supportNormal,
             netForce = netForce,
             position = transform.position,
@@ -163,7 +188,7 @@ public class RayMover : MonoBehaviour
         };
     }
 
-    private void LoadRecord(Record record, ref Vector2 netForce)
+    private void LoadRecord(Record record, ref Vector2 netForce, ref bool allowWallRunning)
     {
         velocity = record.velocity;
         supported = record.supported;
@@ -171,6 +196,7 @@ public class RayMover : MonoBehaviour
         supportNormal = record.supportNormal;
         netForce = record.netForce;
         transform.position = record.position;
+        allowWallRunning = record.allowWallRunning;
     }
     
     public void ToggleRecording()
@@ -291,31 +317,31 @@ public class RayMover : MonoBehaviour
     {
         if (recording)
         {
-            records.Add(MakeRecord(netForce, time));
+            records.Add(MakeRecord(netForce, time, allowWallRunning));
         }
         else if (playingBack)
         {
-            LoadRecord(records[playbackIndex], ref netForce);
+            LoadRecord(records[playbackIndex], ref netForce, ref allowWallRunning);
         }
         data.Clear();
         data.SetIndex(-2);
-        if (!supported)
+        if (!SupportedByWall())
         {
             CheckForSupport(netForce.normalized, allowWallRunning);
         }
-        data.AddRecord(MakeRecord(netForce, time));
+        data.AddRecord(MakeRecord(netForce, time, allowWallRunning));
         data.SetIndex(-1);
         if (allowWallRunning && !supported)
         {
             CheckWallCling(netForce.normalized);
             if (wallOnLeft || wallOnRight) UpdateNormal(WallNormal(), netForce.normalized, allowWallRunning);
         }
-        data.AddRecord(MakeRecord(netForce, time));
+        data.AddRecord(MakeRecord(netForce, time, allowWallRunning));
         int iteration = 0;
         for (; iteration < iterationCount; iteration++)
         {
             data.SetIndex(iteration);
-            data.AddRecord(MakeRecord(netForce, time));
+            data.AddRecord(MakeRecord(netForce, time, allowWallRunning));
             // Do not move into the slope we are running parallel to.
             Vector2 displacement = (velocity + netForce * time) * time;
             if (supported)
@@ -334,11 +360,11 @@ public class RayMover : MonoBehaviour
         }
         data.SetIndex(iteration);
         CheckWallCling(netForce.normalized);
-        if (allowWallRunning && !supported)
+        if (allowWallRunning && (!supported || SupportedByWall()))
         {
             if (wallOnLeft || wallOnRight) UpdateNormal(WallNormal(), netForce.normalized, allowWallRunning);
         }
-        data.AddRecord(MakeRecord(netForce, time));
+        data.AddRecord(MakeRecord(netForce, time, allowWallRunning));
     }
 
     private bool CastAndMove(Vector2 displacement, Vector2 netForce, bool allowWallRunning, ref float time)
@@ -352,16 +378,16 @@ public class RayMover : MonoBehaviour
         Vector2 direction = displacement / distance;
         if (Cast(direction, distance, out var hit))
         {
-            // Update the amount we have moved. This includes the effect of netforce
-            // on our velocity.
-            float timeToFirstHit = time * hit.distance / distance;
-            time -= timeToFirstHit;
-            velocity += netForce * timeToFirstHit;
             // Move in the direction the given distance, but then move away from the
             // hit object by skin width. Note: we can move into another object this way
             // but over time we will resolve out of the objects.
             transform.position += (Vector3) (direction * hit.distance);
             TransferSupport(hit.normal, netForce, allowWallRunning);
+            // Update the amount we have moved. This includes the effect of netforce
+            // on our velocity.
+            float timeToFirstHit = time * hit.distance / distance;
+            time -= timeToFirstHit;
+            velocity += netForce * timeToFirstHit;
             return false;
         }
         else
@@ -379,7 +405,7 @@ public class RayMover : MonoBehaviour
         supportNormal = newNormal;
         supported = Vector2.Dot(-forceDirection, supportNormal) > minWallCos; // We aren't touching a wall
         sliding = Vector2.Dot(-forceDirection, supportNormal) < maxSlopeCos && !(allowWallRunning && supported); // We aren't sliding on that wall.
-        if (supported)
+        if (supported && updateVelocity)
         {
             float velocityTowardSupport = Vector2.Dot(supportNormal, velocity);
             if (velocityTowardSupport < 0)
@@ -454,10 +480,20 @@ public class RayMover : MonoBehaviour
         }
         else
         {
+            
             // Move perpendicular to our normal in the same way we were moving
             // perpendicular to our last normal.
             float perpSpeed = Vector2.Dot(velocity, Vector2.Perpendicular(oldSupport));
-            velocity = perpSpeed * Vector2.Perpendicular(newSupportNormal);
+            Vector2 targetPerp = Vector2.Perpendicular(newSupportNormal);
+            float velocityTowardsTransferDirection = Vector2.Dot(velocity, targetPerp);
+            bool flipped = false;
+            if (Mathf.Abs(velocityTowardsTransferDirection) > Mathf.Epsilon && Mathf.Sign(velocityTowardsTransferDirection) != Mathf.Sign(perpSpeed))
+            {
+                targetPerp *= -1;
+                flipped = true;
+            }
+            velocity = perpSpeed * targetPerp;
+            data.MarkMomentumTransfer(oldSupport, supportNormal, perpSpeed * Vector2.Perpendicular(oldSupport), perpSpeed * targetPerp, flipped, velocityTowardsTransferDirection * Vector2.Perpendicular(newSupportNormal));
         }
     }
 
@@ -588,7 +624,7 @@ public class RayMover : MonoBehaviour
 
     public bool SupportedByWall()
     {
-        return supported && Vector2.Dot(supportNormal, Vector2.up) < maxSlopeCos;
+        return supported && !sliding && Vector2.Dot(supportNormal, Vector2.up) < maxSlopeCos;
     }
 
     public WallDirection GetClingableWall()
@@ -678,7 +714,7 @@ public class RayMover : MonoBehaviour
 
         if ((displayCastTags & DebugData.DebugTag.AdjustCast) == DebugData.DebugTag.AdjustCast)
         {
-            Gizmos.color = Color.black;
+            Gizmos.color = Color.white;
             if (data.castInfo.TryGetValue(DebugData.DebugTag.AdjustCast, out var lines))
             {
                 foreach (var line in lines)
@@ -710,7 +746,7 @@ public class RayMover : MonoBehaviour
             {
                 if (record.index == dataIndex)
                 {
-                    Gizmos.color = new Color(0.0f, 0.0f, 0.0f, 0.5f);
+                    Gizmos.color = new Color(1.0f, 1.0f, 1.0f, 0.5f);
                     float timeLeft = record.record.time / Time.fixedDeltaTime;
                     Gizmos.DrawCube(record.record.position + (Vector3.down * height * (1 - timeLeft) / 2), new Vector2(width, height * timeLeft));
                     Gizmos.color = Color.yellow;
@@ -732,6 +768,36 @@ public class RayMover : MonoBehaviour
                     {
                         Gizmos.color = Color.red;
                         Gizmos.DrawSphere(record.record.position + new Vector3(width, -height / 3), height / 6);
+                    }
+                    if (record.record.allowWallRunning)
+                    {
+                        Gizmos.color = Color.blue;
+                        Gizmos.DrawSphere(record.record.position + new Vector3(-width, -height / 3), height / 6);
+                    }
+                    foreach (var transfer in data.momentumTransferRecord)
+                    {
+                        if (transfer.index == dataIndex)
+                        {
+                            Gizmos.color = new Color(1.0f, 0.5f, 0.0f, 0.5f);
+                            Vector3 visPos = record.record.position + new Vector3(-width, height / 3);
+                            Gizmos.DrawSphere(visPos, height / 6);
+                            Gizmos.color = Color.yellow;
+                            Gizmos.DrawRay(visPos, transfer.oldPerp);
+                            Gizmos.color = Color.red;
+                            Gizmos.DrawRay(visPos, transfer.newPerp);
+                            visPos += new Vector3(height / 3, width / 3);
+                            if (transfer.flipped)
+                            {
+                                Gizmos.color = new Color(1.0f, 0.5f, 0.0f, 0.5f);
+                                Gizmos.DrawSphere(visPos, height / 6);
+                            }
+                            Gizmos.color = Color.yellow;
+                            Gizmos.DrawRay(visPos, transfer.oldNormal);
+                            Gizmos.color = Color.red;
+                            Gizmos.DrawRay(visPos, transfer.newNormal);
+                            Gizmos.color = Color.grey;
+                            Gizmos.DrawSphere(visPos, transfer.oldVelocityTowardsNewPerp.magnitude);
+                        }
                     }
                     Gizmos.color = Color.magenta;
                     Gizmos.DrawRay(record.record.position, record.record.supportNormal * Mathf.Min(width, height) / 4);
