@@ -13,6 +13,8 @@ public class MovementController : MonoBehaviour
 
     private MovementActions controls;
     private RayMover mover;
+    private Animator animator;
+    private SpriteRenderer sprite;
 
     private bool hasSetupControls = false;
     void SetupControls()
@@ -55,6 +57,9 @@ public class MovementController : MonoBehaviour
         mover = GetComponent<RayMover>();
         mover.CheckForSupport(Vector2.down, false);
         controls = new MovementActions();
+        animator = GetComponent<Animator>();
+        sprite = GetComponent<SpriteRenderer>();
+        mover.UpdateFromBoxCollider();
         
         CalculateControls();
     }
@@ -145,11 +150,15 @@ public class MovementController : MonoBehaviour
             print("Hit the bad case");
         }
 
+        float animationVelocity = 0.0f;
+
         if (!mover.Sliding())
         {
             float perpVelocity = -mover.PerpendicularVelocity(Vector2.down);
             float newVelocity = run.GetVelocity(perpVelocity, desiredMovement.x, mover.Supported());
             SetVelocityComponent(-mover.Left(Vector2.down), newVelocity);
+
+            animationVelocity = newVelocity;
 
             if (doWallRun && mover.GetClingableWall() != RayMover.WallDirection.None)
             {
@@ -246,6 +255,21 @@ public class MovementController : MonoBehaviour
                 JumpTowards(Vector2.up, jump.launchSpeed);
                 wallRun.canRunOnBackWall = true;
             }
+        }
+
+        animator.SetBool("climbing", wallSlide.attachedToWall);
+        animator.SetBool("skidding", run.isSkidding);
+        if (!mover.Supported() && !wallRun.IsWallRunning())
+        {
+            animator.SetFloat("speed", 0.0f);
+        }
+        else
+        {
+            animator.SetFloat("speed", Mathf.Abs(animationVelocity));
+        }
+        if (Mathf.Abs(desiredMovement.x) > Mathf.Epsilon)
+        {
+            sprite.flipX = desiredMovement.x > 0;
         }
 
         mover.Move(Time.fixedDeltaTime, Vector2.down * activeGravity, doWallRun);

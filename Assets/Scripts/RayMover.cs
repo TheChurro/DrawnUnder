@@ -122,6 +122,7 @@ public class RayMover : MonoBehaviour
 {
     public float width;
     public float height;
+    public Vector2 offset;
     public int pointsPerLine;
     public float skinwidth;
     public int iterationCount;
@@ -284,6 +285,7 @@ public class RayMover : MonoBehaviour
 
     private void GetLinePoints(Line line, out Vector2 point0, out Vector2 point1, Vector2 basePos)
     {
+        basePos += offset;
         point1 = basePos;
         point0 = basePos;
         switch (line)
@@ -305,6 +307,14 @@ public class RayMover : MonoBehaviour
                 point1 = basePos + new Vector2( width / 2 - skinwidth, -height / 2 + skinwidth);
                 return;
         }
+    }
+
+    public void UpdateFromBoxCollider()
+    {
+        BoxCollider2D collider = GetComponent<BoxCollider2D>();
+        width = collider.size.x;
+        height = collider.size.y;
+        offset = collider.offset;
     }
 
     public void Awake()
