@@ -4606,16 +4606,16 @@ MonoBehaviour:
   settings:
     baseSpeed: 10
     bailSpeed: 20
-    startAcceleration: 10
+    startAcceleration: 5
     maxBaseRunAcceleration: 10
     skidSpeed: 9
     stopSkiddingSpeed: 1
-    maxBaseSkidAcceleration: 30
+    maxBaseSkidAcceleration: 15
     skidMinControl: 0.5
     skidMaxControl: 1.1
     maxJumpHeight: 3.5
     minJumpHeight: 2.5
-    secondsToApex: 1
+    secondsToApex: 0.5
     coyoteFrames: 3
     jumpBuffer: 3
     wallRunSpeed: 8
@@ -4653,7 +4653,13 @@ MonoBehaviour:
     maxEnergy: 0
     clingEnergyPerTick: 0
     currentEnergy: 0
-  walls: 0
+  wallRun:
+    speedNeddedForRun: 0
+    currentVerticalWall: {x: 0, y: 0}
+    canRunOnBackWall: 0
+    runningOnBackWall: 0
+    runningOnFrontWall: 0
+    backWallCount: 0
 --- !u!212 &604593777
 SpriteRenderer:
   m_ObjectHideFlags: 0

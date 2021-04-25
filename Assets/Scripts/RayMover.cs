@@ -434,7 +434,7 @@ public class RayMover : MonoBehaviour
         }
         else
         {
-            if (supported)
+            if (supported && !sliding)
                 airtimeStart = Time.time;
             supported = false;
         }

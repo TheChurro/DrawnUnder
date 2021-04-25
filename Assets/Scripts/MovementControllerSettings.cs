@@ -146,15 +146,21 @@ public struct RunVars
 
         if (isSkidding && grounded)
         {
-            float acceleration = -skidSpeed * Mathf.Lerp(skidMaxControl, skidMinControl, (1 + moveInput * skidDirection) / 2.0f) * currentVelocity * (1 - speedDegree);
+            float control = Mathf.Lerp(skidMaxControl, skidMinControl, (1 + moveInput * skidDirection) / 2.0f);
+            float acceleration = -skidPower * control * currentVelocity * speedDegree;
             return currentVelocity + acceleration * Time.fixedDeltaTime;
         }
 
         float inputIntent = (2 * (moveDegree - 0.5f));
+        if (speedDegree > 1)
+        {
+            inputIntent = 1;
+        }
 
         // Get logistic acceleation so that a nuetral input is treated as slowing down.
         float nonLinearVelChange = (rampupPower * inputIntent * currentVelocity * (1 - speedDegree)) * Time.fixedDeltaTime;
         float linearUpdate = Mathf.Lerp(currentVelocity, moveInput * baseSpeed, baseAcceleration * Time.fixedDeltaTime / baseSpeed);
+        Debug.Log($"Velocity {currentVelocity} | Linear Target {linearUpdate} | Non Linear Vel Change: {nonLinearVelChange} | Degree {1 - speedDegree} | Intent {inputIntent}");
 
         return Mathf.Lerp(linearUpdate, currentVelocity + nonLinearVelChange, speedDegree);
     }
@@ -189,11 +195,20 @@ public struct WallSlideVars
     public float wallDirectionModifier;
 }
 
+[System.Serializable]
 public struct WallRunVars
 {
     public float speedNeddedForRun;
     public Vector2 currentVerticalWall;
     public bool canRunOnBackWall;
+    public bool runningOnBackWall;
+    public bool runningOnFrontWall;
+    public int backWallCount;
+
+    public bool IsWallRunning()
+    {
+        return runningOnBackWall || runningOnFrontWall;
+    }
 }
 
 [System.Serializable]

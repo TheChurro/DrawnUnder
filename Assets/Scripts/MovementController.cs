@@ -77,9 +77,16 @@ public class MovementController : MonoBehaviour
         mover.velocity += (ratio - 1) * velocityInDirection * component;
     }
 
-    void JumpTowards(Vector2 component, float amount)
+    void JumpTowards(Vector2 component, float amount, bool add = false)
     {
-        SetVelocityComponent(component, amount);
+        if (add)
+        {
+            mover.velocity += component * amount;
+        }
+        else
+        {
+            SetVelocityComponent(component, amount);
+        }
         jump.jumpPressTime = Mathf.NegativeInfinity; // We handled the jump input
     }
 
@@ -91,6 +98,30 @@ public class MovementController : MonoBehaviour
     public bool CanWallJump()
     {
         return Time.time - wallSlide.lastAttachedToWall < jump.coyoteTolerance;
+    }
+
+    public void BeginBackWallRun()
+    {
+        wallRun.runningOnBackWall = true;
+        wallRun.canRunOnBackWall = false;
+    }
+
+    public void BeginFrontWallRun()
+    {
+        wallRun.runningOnFrontWall = true;
+        wallRun.runningOnBackWall = false;
+    }
+
+    public void DropWallRun()
+    {
+        if (wallRun.runningOnBackWall)
+        {
+            wallRun.runningOnBackWall = false;
+        }
+        if (wallRun.runningOnFrontWall)
+        {
+            wallRun.runningOnFrontWall = false;
+        }
     }
 
     // Called on a fixed time step.
@@ -105,11 +136,29 @@ public class MovementController : MonoBehaviour
         Vector2 desiredMovement = controls.Gameplay.Move.ReadValue<Vector2>();
         bool doWallRun = controls.Gameplay.WallRun.ReadValue<float>() > 0 && wallRun.speedNeddedForRun <= mover.velocity.magnitude;
 
+        if (!doWallRun)
+        {
+            DropWallRun();
+        }
+
+        if (mover.velocity.magnitude > run.baseSpeed)
+        {
+            print("Hit the bad case");
+        }
+
         if (!mover.Sliding())
         {
             float perpVelocity = -mover.PerpendicularVelocity(Vector2.down);
             float newVelocity = run.GetVelocity(perpVelocity, desiredMovement.x, mover.Supported());
+            if (mover.velocity.magnitude > run.baseSpeed)
+            {
+                print("Hit the bad case");
+            }
             SetVelocityComponent(-mover.Left(Vector2.down), newVelocity);
+            if (mover.velocity.magnitude > run.baseSpeed)
+            {
+                print("Hit the bad case");
+            }
 
             if (doWallRun && mover.GetClingableWall() != RayMover.WallDirection.None)
             {
@@ -119,10 +168,40 @@ public class MovementController : MonoBehaviour
             if (mover.Supported())
             {
                 energy.Reset();
+                wallRun.canRunOnBackWall = true;
+            }
+            else
+            {
+                if (wallRun.backWallCount > 0 && wallRun.canRunOnBackWall && doWallRun)
+                {
+                    BeginBackWallRun();
+                }
+                if (wallRun.backWallCount == 0)
+                {
+                    DropWallRun();
+                }
+
+                if (wallRun.IsWallRunning())
+                {
+                    float verticalVelocity = Vector2.Dot(mover.velocity, Vector2.up);
+                    float newVerticalVelocity = run.GetVelocity(verticalVelocity, desiredMovement.y, true);
+                    SetVelocityComponent(Vector2.up, newVerticalVelocity * wallSlide.clingSpeedMultiplierPerTick);
+                }
+            }
+
+            if (mover.SupportedByWall())
+            {
+                wallSlide.attachedToWall = true;
+                wallSlide.lastAttachedToWall = Time.time;
+                if (!wallRun.runningOnFrontWall) BeginFrontWallRun();
+            }
+            else if (mover.GetClingableWall() == RayMover.WallDirection.None)
+            {
+                wallSlide.attachedToWall = false;
             }
         }
         
-        if (!mover.Supported() || mover.SupportedByWall())
+        if (!mover.Supported() && !wallRun.IsWallRunning())
         {
             // If we are clinging to a wall, decreate our gravity.
             RayMover.WallDirection wall = mover.GetClingableWall();
@@ -149,18 +228,21 @@ public class MovementController : MonoBehaviour
                 wallSlide.attachedToWall = false;
             }
         }
-        else
-        {
-            wallSlide.attachedToWall = false;
-        }
 
         if (jump.ShouldJump())
         {
-            if (CanWallJump())
+            if (CanWallJump() || wallRun.IsWallRunning())
             {
-                // First clear any momentum we have going toward the wall.
-                SetVelocityComponent(mover.WallNormal(), 0.0f);
-                JumpTowards(new Vector2(-wallSlide.wallDirectionModifier, 1).normalized, jump.launchSpeed);
+                if (wallRun.runningOnBackWall)
+                {
+                    JumpTowards(desiredMovement.normalized, jump.launchSpeed, true);
+                }
+                else
+                {
+                    // First clear any momentum we have going toward the wall.
+                    SetVelocityComponent(mover.WallNormal(), 0.0f);
+                    JumpTowards(new Vector2(-wallSlide.wallDirectionModifier, 1).normalized, jump.launchSpeed);
+                }
             }
 
             if (CanJump())
@@ -172,12 +254,11 @@ public class MovementController : MonoBehaviour
         mover.Move(Time.fixedDeltaTime, Vector2.down * activeGravity, doWallRun);
     }
 
-    public int walls = 0;
     void OnTriggerEnter2D(Collider2D col)
     {
         if (col.tag == "Runnable")
         {
-            walls++;
+            wallRun.backWallCount++;
         }
     }
 
@@ -185,7 +266,7 @@ public class MovementController : MonoBehaviour
     {
         if (col.tag == "Runnable")
         {
-            walls--;
+            wallRun.backWallCount--;
         }
     }
 }
