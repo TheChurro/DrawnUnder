@@ -20,6 +20,14 @@
                     "expectedControlType": "Button",
                     "processors": "",
                     "interactions": ""
+                },
+                {
+                    "name": "WallRun",
+                    "type": "Value",
+                    "id": "0ef9e265-b06e-4d1e-8ec8-d807a3727792",
+                    "expectedControlType": "Digital",
+                    "processors": "",
+                    "interactions": ""
                 }
             ],
             "bindings": [
@@ -86,6 +94,17 @@
                     "processors": "",
                     "groups": "",
                     "action": "Jump",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "32b0998f-7d6e-4d01-8707-eb6550b52c76",
+                    "path": "<Keyboard>/shift",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "WallRun",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

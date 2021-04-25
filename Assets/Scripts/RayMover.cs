@@ -148,7 +148,7 @@ public class RayMover : MonoBehaviour
     private bool recording;
     private bool playingBack;
     private int playbackIndex;
-    private int dataIndex = -1;
+    private int dataIndex = -2;
 
     private Record MakeRecord(Vector2 netForce, float time)
     {
@@ -223,7 +223,7 @@ public class RayMover : MonoBehaviour
             dataIndex++;
             if (dataIndex > data.GetIndex())
             {
-                dataIndex = -1;
+                dataIndex = -2;
                 playbackIndex++;
                 if (playbackIndex >= records.Count)
                     playbackIndex = records.Count - 1;
@@ -236,7 +236,7 @@ public class RayMover : MonoBehaviour
         if (playingBack)
         {
             dataIndex--;
-            if (dataIndex < -1)
+            if (dataIndex < -2)
             {
                 dataIndex = iterationCount;
                 playbackIndex--;
@@ -287,7 +287,7 @@ public class RayMover : MonoBehaviour
         minWallCos = Mathf.Cos(Mathf.Deg2Rad * minWallAngle);
     }
 
-    public void Move(float time, Vector2 netForce)
+    public void Move(float time, Vector2 netForce, bool allowWallRunning)
     {
         if (recording)
         {
@@ -298,9 +298,19 @@ public class RayMover : MonoBehaviour
             LoadRecord(records[playbackIndex], ref netForce);
         }
         data.Clear();
-        data.SetIndex(-1);
+        data.SetIndex(-2);
+        if (!supported)
+        {
+            CheckForSupport(netForce.normalized, allowWallRunning);
+        }
         data.AddRecord(MakeRecord(netForce, time));
-        CheckForSupport(netForce.normalized);
+        data.SetIndex(-1);
+        if (allowWallRunning && !supported)
+        {
+            CheckWallCling(netForce.normalized);
+            if (wallOnLeft || wallOnRight) UpdateNormal(WallNormal(), netForce.normalized, allowWallRunning);
+        }
+        data.AddRecord(MakeRecord(netForce, time));
         int iteration = 0;
         for (; iteration < iterationCount; iteration++)
         {
@@ -316,7 +326,7 @@ public class RayMover : MonoBehaviour
                     displacement -= normalMovement * supportNormal;
                 }
             }
-            if (CastAndMove(displacement, netForce, ref time))
+            if (CastAndMove(displacement, netForce, allowWallRunning, ref time))
             {
                 iteration++;
                 break;
@@ -324,9 +334,14 @@ public class RayMover : MonoBehaviour
         }
         data.SetIndex(iteration);
         CheckWallCling(netForce.normalized);
+        if (allowWallRunning && !supported)
+        {
+            if (wallOnLeft || wallOnRight) UpdateNormal(WallNormal(), netForce.normalized, allowWallRunning);
+        }
+        data.AddRecord(MakeRecord(netForce, time));
     }
 
-    private bool CastAndMove(Vector2 displacement, Vector2 netForce, ref float time)
+    private bool CastAndMove(Vector2 displacement, Vector2 netForce, bool allowWallRunning, ref float time)
     {
         float distance = displacement.magnitude;
         // Early out of moving if we aren't moving...
@@ -346,7 +361,7 @@ public class RayMover : MonoBehaviour
             // hit object by skin width. Note: we can move into another object this way
             // but over time we will resolve out of the objects.
             transform.position += (Vector3) (direction * hit.distance);
-            TransferSupport(hit.normal, netForce);
+            TransferSupport(hit.normal, netForce, allowWallRunning);
             return false;
         }
         else
@@ -354,24 +369,32 @@ public class RayMover : MonoBehaviour
             velocity += netForce * time;
             transform.position += (Vector3) displacement;
             time = 0;
-            CheckForSupport(netForce);
+            CheckForSupport(netForce, allowWallRunning);
             return true;
         }
     }
 
-    public void UpdateNormal(Vector2 newNormal, Vector2 forceDirection)
+    public void UpdateNormal(Vector2 newNormal, Vector2 forceDirection, bool allowWallRunning, bool updateVelocity = true)
     {
         supportNormal = newNormal;
         supported = Vector2.Dot(-forceDirection, supportNormal) > minWallCos; // We aren't touching a wall
-        sliding = Vector2.Dot(-forceDirection, supportNormal) < maxSlopeCos; // We aren't sliding on that wall.
+        sliding = Vector2.Dot(-forceDirection, supportNormal) < maxSlopeCos && !(allowWallRunning && supported); // We aren't sliding on that wall.
+        if (supported)
+        {
+            float velocityTowardSupport = Vector2.Dot(supportNormal, velocity);
+            if (velocityTowardSupport < 0)
+            {
+                velocity -= velocityTowardSupport * supportNormal;
+            }
+        }
     }
 
-    public void CheckForSupport(Vector2 forceDirection)
+    public void CheckForSupport(Vector2 forceDirection, bool allowWallRunning)
     {
         RaycastHit2D hit = new RaycastHit2D();
         if (CastLine(Line.Down, Vector2.down, skinwidth, ref hit, DebugData.DebugTag.GroundCast))
         {
-            UpdateNormal(hit.normal, forceDirection);
+            UpdateNormal(hit.normal, forceDirection, allowWallRunning);
             transform.position += (Vector3)(Vector2.down * hit.distance);
             float speedAwayFromNormal = Vector2.Dot(supportNormal, velocity);
             if (speedAwayFromNormal < 0.0f)
@@ -410,7 +433,7 @@ public class RayMover : MonoBehaviour
     // Updates our supported state to true with the new given normal.
     // Also updates our velocity to keep the same perpendicular speed
     // we had relative to our last support if we can move on this slope
-    private void TransferSupport(Vector2 newSupportNormal, Vector2 netForce)
+    private void TransferSupport(Vector2 newSupportNormal, Vector2 netForce, bool allowWallRunning)
     {
         Vector2 forceDirection = netForce.normalized;
         Vector2 oldSupport = -forceDirection;
@@ -419,8 +442,8 @@ public class RayMover : MonoBehaviour
             oldSupport = supportNormal;
         }
         bool wasSliding = Sliding();
-        UpdateNormal(newSupportNormal, forceDirection);
-        if (!supported || sliding || wasSliding)
+        UpdateNormal(newSupportNormal, forceDirection, allowWallRunning, false);
+        if (!supported || (!allowWallRunning && (sliding || wasSliding)))
         {
             // Remove movement in the direction of our normal vector
             float velocityIntoNormal = Vector2.Dot(velocity, newSupportNormal);
@@ -563,6 +586,11 @@ public class RayMover : MonoBehaviour
         return supported;
     }
 
+    public bool SupportedByWall()
+    {
+        return supported && Vector2.Dot(supportNormal, Vector2.up) < maxSlopeCos;
+    }
+
     public WallDirection GetClingableWall()
     {
         return wallOnRight ? WallDirection.Right : wallOnLeft ? WallDirection.Left : WallDirection.None;
@@ -682,7 +710,7 @@ public class RayMover : MonoBehaviour
             {
                 if (record.index == dataIndex)
                 {
-                    Gizmos.color = Color.black;
+                    Gizmos.color = new Color(0.0f, 0.0f, 0.0f, 0.5f);
                     float timeLeft = record.record.time / Time.fixedDeltaTime;
                     Gizmos.DrawCube(record.record.position + (Vector3.down * height * (1 - timeLeft) / 2), new Vector2(width, height * timeLeft));
                     Gizmos.color = Color.yellow;

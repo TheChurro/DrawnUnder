@@ -9,8 +9,9 @@ public class MovementController : MonoBehaviour
     public JumpVars jump;
     public WallSlideVars wallSlide;
     public EnergyVars energy;
+    public WallRunVars wallRun;
 
-    public MovementActions controls;
+    private MovementActions controls;
     private RayMover mover;
 
     private bool hasSetupControls = false;
@@ -46,12 +47,13 @@ public class MovementController : MonoBehaviour
         jump = settings.GetJumpVars();
         wallSlide = settings.GetWallSlideVars();
         energy = settings.GetEnergyVars();
+        wallRun = settings.GetWallRunVars();
     }
 
     void Start()
     {
         mover = GetComponent<RayMover>();
-        mover.CheckForSupport(Vector2.down);
+        mover.CheckForSupport(Vector2.down, false);
         controls = new MovementActions();
         
         CalculateControls();
@@ -62,6 +64,10 @@ public class MovementController : MonoBehaviour
         Vector2 velocity = mover.velocity;
         float velocityInDirection = Vector2.Dot(component, velocity);
         mover.velocity += (amount - velocityInDirection) * component;
+        if (mover.velocity.magnitude < Mathf.Epsilon)
+        {
+            print("Hit a zero case!");
+        }
     }
 
     void MultiplyVelocityComponent(Vector2 component, float ratio)
@@ -97,6 +103,7 @@ public class MovementController : MonoBehaviour
         float input = controls.Gameplay.Jump.ReadValue<float>();
         float activeGravity = Mathf.Lerp(jump.maxGravity, jump.minGravity, input);
         Vector2 desiredMovement = controls.Gameplay.Move.ReadValue<Vector2>();
+        bool doWallRun = controls.Gameplay.WallRun.ReadValue<float>() > 0 && wallRun.speedNeddedForRun <= mover.velocity.magnitude;
 
         if (!mover.Sliding())
         {
@@ -104,13 +111,18 @@ public class MovementController : MonoBehaviour
             float newVelocity = run.GetVelocity(perpVelocity, desiredMovement.x, mover.Supported());
             SetVelocityComponent(-mover.Left(Vector2.down), newVelocity);
 
+            if (doWallRun && mover.GetClingableWall() != RayMover.WallDirection.None)
+            {
+                MultiplyVelocityComponent(mover.WallDown(), wallSlide.clingSpeedMultiplierPerTick);
+            }
+
             if (mover.Supported())
             {
                 energy.Reset();
             }
         }
         
-        if (!mover.Supported())
+        if (!mover.Supported() || mover.SupportedByWall())
         {
             // If we are clinging to a wall, decreate our gravity.
             RayMover.WallDirection wall = mover.GetClingableWall();
@@ -146,6 +158,8 @@ public class MovementController : MonoBehaviour
         {
             if (CanWallJump())
             {
+                // First clear any momentum we have going toward the wall.
+                SetVelocityComponent(mover.WallNormal(), 0.0f);
                 JumpTowards(new Vector2(-wallSlide.wallDirectionModifier, 1).normalized, jump.launchSpeed);
             }
 
@@ -155,7 +169,7 @@ public class MovementController : MonoBehaviour
             }
         }
 
-        mover.Move(Time.fixedDeltaTime, Vector2.down * activeGravity);
+        mover.Move(Time.fixedDeltaTime, Vector2.down * activeGravity, doWallRun);
     }
 
     public int walls = 0;

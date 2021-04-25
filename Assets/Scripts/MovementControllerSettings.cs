@@ -7,6 +7,7 @@ public struct MovementControllerSettings
 {
     #region Run Settings
     public float baseSpeed;
+    public float bailSpeed;
     public float startAcceleration;
     public float maxBaseRunAcceleration;
     public float skidSpeed;
@@ -23,6 +24,10 @@ public struct MovementControllerSettings
 
     public int coyoteFrames;
     public int jumpBuffer;
+    #endregion
+
+    #region Wall Run Settings
+    public float wallRunSpeed;
     #endregion
 
     #region Wall Slide Settings
@@ -53,6 +58,7 @@ public struct MovementControllerSettings
         vars.skidMaxControl = skidMaxControl;
         vars.skidMinControl = skidMinControl;
         vars.stopSkiddingSpeed = stopSkiddingSpeed;
+        vars.bailSpeed = bailSpeed;
         return vars;
     }
 
@@ -79,6 +85,14 @@ public struct MovementControllerSettings
         return vars;
     }
 
+    public WallRunVars GetWallRunVars()
+    {
+        WallRunVars vars = new WallRunVars();
+        vars.canRunOnBackWall = true;
+        vars.speedNeddedForRun = wallRunSpeed;
+        return vars;
+    }
+
     public WallSlideVars GetWallSlideVars()
     {
         WallSlideVars vars = new WallSlideVars();
@@ -101,6 +115,7 @@ public struct MovementControllerSettings
 public struct RunVars
 {
     public float baseSpeed;
+    public float bailSpeed;
     public float invBaseSpeed;
     public float rampupPower;
     public float skidPower;
@@ -112,11 +127,6 @@ public struct RunVars
 
     public bool isSkidding;
     public float skidDirection;
-
-    public float lastAccleration;
-    public float lastLinearAccleration;
-    public float lastNonlinearAccleration;
-    public float lastSpeedDegree;
 
     public float GetVelocity(float currentVelocity, float moveInput, bool grounded)
     {
@@ -177,6 +187,13 @@ public struct WallSlideVars
     public bool attachedToWall;
     public float lastAttachedToWall;
     public float wallDirectionModifier;
+}
+
+public struct WallRunVars
+{
+    public float speedNeddedForRun;
+    public Vector2 currentVerticalWall;
+    public bool canRunOnBackWall;
 }
 
 [System.Serializable]

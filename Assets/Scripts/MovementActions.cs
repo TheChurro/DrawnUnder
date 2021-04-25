@@ -33,6 +33,14 @@ public class @MovementActions : IInputActionCollection, IDisposable
                     ""expectedControlType"": ""Button"",
                     ""processors"": """",
                     ""interactions"": """"
+                },
+                {
+                    ""name"": ""WallRun"",
+                    ""type"": ""Value"",
+                    ""id"": ""0ef9e265-b06e-4d1e-8ec8-d807a3727792"",
+                    ""expectedControlType"": ""Digital"",
+                    ""processors"": """",
+                    ""interactions"": """"
                 }
             ],
             ""bindings"": [
@@ -99,6 +107,17 @@ public class @MovementActions : IInputActionCollection, IDisposable
                     ""processors"": """",
                     ""groups"": """",
                     ""action"": ""Jump"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""32b0998f-7d6e-4d01-8707-eb6550b52c76"",
+                    ""path"": ""<Keyboard>/shift"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""WallRun"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -195,6 +214,7 @@ public class @MovementActions : IInputActionCollection, IDisposable
         m_Gameplay = asset.FindActionMap("Gameplay", throwIfNotFound: true);
         m_Gameplay_Move = m_Gameplay.FindAction("Move", throwIfNotFound: true);
         m_Gameplay_Jump = m_Gameplay.FindAction("Jump", throwIfNotFound: true);
+        m_Gameplay_WallRun = m_Gameplay.FindAction("WallRun", throwIfNotFound: true);
         // Recording
         m_Recording = asset.FindActionMap("Recording", throwIfNotFound: true);
         m_Recording_Record = m_Recording.FindAction("Record", throwIfNotFound: true);
@@ -252,12 +272,14 @@ public class @MovementActions : IInputActionCollection, IDisposable
     private IGameplayActions m_GameplayActionsCallbackInterface;
     private readonly InputAction m_Gameplay_Move;
     private readonly InputAction m_Gameplay_Jump;
+    private readonly InputAction m_Gameplay_WallRun;
     public struct GameplayActions
     {
         private @MovementActions m_Wrapper;
         public GameplayActions(@MovementActions wrapper) { m_Wrapper = wrapper; }
         public InputAction @Move => m_Wrapper.m_Gameplay_Move;
         public InputAction @Jump => m_Wrapper.m_Gameplay_Jump;
+        public InputAction @WallRun => m_Wrapper.m_Gameplay_WallRun;
         public InputActionMap Get() { return m_Wrapper.m_Gameplay; }
         public void Enable() { Get().Enable(); }
         public void Disable() { Get().Disable(); }
@@ -273,6 +295,9 @@ public class @MovementActions : IInputActionCollection, IDisposable
                 @Jump.started -= m_Wrapper.m_GameplayActionsCallbackInterface.OnJump;
                 @Jump.performed -= m_Wrapper.m_GameplayActionsCallbackInterface.OnJump;
                 @Jump.canceled -= m_Wrapper.m_GameplayActionsCallbackInterface.OnJump;
+                @WallRun.started -= m_Wrapper.m_GameplayActionsCallbackInterface.OnWallRun;
+                @WallRun.performed -= m_Wrapper.m_GameplayActionsCallbackInterface.OnWallRun;
+                @WallRun.canceled -= m_Wrapper.m_GameplayActionsCallbackInterface.OnWallRun;
             }
             m_Wrapper.m_GameplayActionsCallbackInterface = instance;
             if (instance != null)
@@ -283,6 +308,9 @@ public class @MovementActions : IInputActionCollection, IDisposable
                 @Jump.started += instance.OnJump;
                 @Jump.performed += instance.OnJump;
                 @Jump.canceled += instance.OnJump;
+                @WallRun.started += instance.OnWallRun;
+                @WallRun.performed += instance.OnWallRun;
+                @WallRun.canceled += instance.OnWallRun;
             }
         }
     }
@@ -348,6 +376,7 @@ public class @MovementActions : IInputActionCollection, IDisposable
     {
         void OnMove(InputAction.CallbackContext context);
         void OnJump(InputAction.CallbackContext context);
+        void OnWallRun(InputAction.CallbackContext context);
     }
     public interface IRecordingActions
     {
