@@ -134,7 +134,7 @@ public class MovementController : MonoBehaviour
         float input = controls.Gameplay.Jump.ReadValue<float>();
         float activeGravity = Mathf.Lerp(jump.maxGravity, jump.minGravity, input);
         Vector2 desiredMovement = controls.Gameplay.Move.ReadValue<Vector2>();
-        bool doWallRun = controls.Gameplay.WallRun.ReadValue<float>() > 0 && wallRun.speedNeddedForRun <= mover.velocity.magnitude;
+        bool doWallRun = wallRun.speedNeddedForRun <= mover.velocity.magnitude;
 
         if (!doWallRun)
         {
@@ -186,6 +186,7 @@ public class MovementController : MonoBehaviour
                     float verticalVelocity = Vector2.Dot(mover.velocity, Vector2.up);
                     float newVerticalVelocity = run.GetVelocity(verticalVelocity, desiredMovement.y, true);
                     SetVelocityComponent(Vector2.up, newVerticalVelocity * wallSlide.clingSpeedMultiplierPerTick);
+                    activeGravity *= wallSlide.wallSlideAccelerationMultiplier;
                 }
             }
 
@@ -193,6 +194,7 @@ public class MovementController : MonoBehaviour
             {
                 wallSlide.attachedToWall = true;
                 wallSlide.lastAttachedToWall = Time.time;
+                wallRun.canRunOnBackWall = true;
                 if (!wallRun.runningOnFrontWall) BeginFrontWallRun();
             }
             else if (mover.GetClingableWall() == RayMover.WallDirection.None)
@@ -219,7 +221,7 @@ public class MovementController : MonoBehaviour
 
                 if (wallSlide.attachedToWall)
                 {
-                    activeGravity *= 0.5f;
+                    activeGravity *= wallSlide.wallSlideAccelerationMultiplier;
                     wallSlide.lastAttachedToWall = Time.time;
                 }
             }
@@ -242,12 +244,14 @@ public class MovementController : MonoBehaviour
                     // First clear any momentum we have going toward the wall.
                     SetVelocityComponent(mover.WallNormal(), 0.0f);
                     JumpTowards(new Vector2(-wallSlide.wallDirectionModifier, 1).normalized, jump.launchSpeed);
+                    wallRun.canRunOnBackWall = true;
                 }
             }
 
             if (CanJump())
             {
                 JumpTowards(Vector2.up, jump.launchSpeed);
+                wallRun.canRunOnBackWall = true;
             }
         }
 
