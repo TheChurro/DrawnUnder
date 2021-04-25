@@ -598,10 +598,10 @@ public class RayMover : MonoBehaviour
         return -Vector2.Perpendicular(netForce.normalized);
     }
 
-    public Vector2 PerpendicularVelocity(Vector2 netForce)
+    public float PerpendicularVelocity(Vector2 netForce)
     {
         Vector2 left = Left(netForce);
-        return left * Vector2.Dot(left, velocity);
+        return Vector2.Dot(left, velocity);
     }
 
     public float TimeInAir()
