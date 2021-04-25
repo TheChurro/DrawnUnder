@@ -15,6 +15,7 @@ public class MovementController : MonoBehaviour
     private RayMover mover;
     private Animator animator;
     private SpriteRenderer sprite;
+    private bool paused = true;
 
     private bool hasSetupControls = false;
     void SetupControls()
@@ -128,9 +129,20 @@ public class MovementController : MonoBehaviour
         }
     }
 
+    public void Pause()
+    {
+        paused = true;
+    }
+
+    public void Unpause()
+    {
+        paused = false;
+    }
+
     // Called on a fixed time step.
     void FixedUpdate()
     {
+        if (paused) return;
         SetupControls();
         
         // Read the value of our jump button. This is reported as a float, so we can have analog input.
