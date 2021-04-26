@@ -16,6 +16,7 @@ public class MovementController : MonoBehaviour
     private Animator animator;
     private SpriteRenderer sprite;
     private bool paused = true;
+    private Vector2 draw;
 
     private bool hasSetupControls = false;
     void SetupControls()
@@ -65,14 +66,32 @@ public class MovementController : MonoBehaviour
         CalculateControls();
     }
 
+    public void Teleport(Vector3 position)
+    {
+        transform.position = position;
+        mover.velocity = Vector2.zero;
+        CalculateControls(); // Reset all variables. Easy peasy.
+    }
+
+    public void SetDraw(Vector2 draw)
+    {
+        this.draw = draw;
+    }
+
     void SetVelocityComponent(Vector2 component, float amount)
     {
         Vector2 velocity = mover.velocity;
         float velocityInDirection = Vector2.Dot(component, velocity);
         mover.velocity += (amount - velocityInDirection) * component;
-        if (mover.velocity.magnitude < Mathf.Epsilon)
+    }
+
+    void SetVelocityComponentTowards(Vector2 component, float amount)
+    {
+        Vector2 velocity = mover.velocity;
+        float velocityInDirection = Vector2.Dot(component, velocity);
+        if (velocityInDirection > 0)
         {
-            print("Hit a zero case!");
+            mover.velocity += (amount - velocityInDirection) * component;
         }
     }
 
@@ -155,11 +174,6 @@ public class MovementController : MonoBehaviour
         if (!doWallRun)
         {
             DropWallRun();
-        }
-
-        if (mover.velocity.magnitude > run.baseSpeed)
-        {
-            print("Hit the bad case");
         }
 
         float animationVelocity = 0.0f;
@@ -255,8 +269,10 @@ public class MovementController : MonoBehaviour
                 }
                 else
                 {
-                    // First clear any momentum we have going toward the wall.
+                    // First clear any momentum we have going toward the wall and going downwards
+                    // (It's kinda fun to slide downard but doesn't feel intuitive)
                     SetVelocityComponent(mover.WallNormal(), 0.0f);
+                    SetVelocityComponentTowards(mover.WallDown(), 0.0f);
                     JumpTowards(new Vector2(-wallSlide.wallDirectionModifier, 1).normalized, jump.launchSpeed);
                     wallRun.canRunOnBackWall = true;
                 }
@@ -284,7 +300,13 @@ public class MovementController : MonoBehaviour
             sprite.flipX = desiredMovement.x > 0;
         }
 
+        bool wasSupported = mover.Supported();
         mover.Move(Time.fixedDeltaTime, Vector2.down * activeGravity, doWallRun);
+        mover.velocity += draw * Time.fixedDeltaTime;
+        if (!wasSupported && mover.velocity.magnitude > jump.deathVelocity)
+        {
+            Die();
+        }
     }
 
     void OnTriggerEnter2D(Collider2D col)
@@ -292,6 +314,15 @@ public class MovementController : MonoBehaviour
         if (col.tag == "Runnable")
         {
             wallRun.backWallCount++;
+        }
+        if (col.tag == "Kill")
+        {
+            Die();
+        }
+        if (col.tag == "Keys")
+        {
+            GameObject.Destroy(col.gameObject);
+            RoomController.instance?.SetHasKeys(true);
         }
     }
 
@@ -301,5 +332,10 @@ public class MovementController : MonoBehaviour
         {
             wallRun.backWallCount--;
         }
+    }
+
+    public void Die()
+    {
+        Teleport(RoomController.instance.GetLastSpawn());
     }
 }

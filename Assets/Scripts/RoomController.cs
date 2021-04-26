@@ -15,7 +15,7 @@ public class RoomController : MonoBehaviour
 
     public RoomInstance[] roomDescriptors;
     public string startRoomName;
-    private string priorRoomName;
+    public string priorRoomName;
     private string loadingRoomName;
     private bool waitingOnRoomLoad = false;
     private GameObject loadingRoom;
@@ -24,6 +24,7 @@ public class RoomController : MonoBehaviour
     public Cinemachine.CinemachineConfiner confiner;
     public Transform activeRoomTransform;
     public Transform loadingRoomTransform;
+    private Vector3 lastSpawn;
 
     public void Awake()
     {
@@ -33,6 +34,18 @@ public class RoomController : MonoBehaviour
     public void Start()
     {
         TransitionToRoom(startRoomName);
+    }
+
+    bool hasKeys;
+
+    public void SetHasKeys(bool value)
+    {
+        hasKeys = value;
+    }
+
+    public bool HasKeys()
+    {
+        return hasKeys;
     }
 
     public void Update()
@@ -48,10 +61,13 @@ public class RoomController : MonoBehaviour
                 activeRoom = room;
                 activeRoom.transform.position = activeRoomTransform.position;
 
-                player.transform.position = room.GetDoorSpawn(priorRoomName);
                 confiner.m_BoundingShape2D = room.bounds;
-                priorRoomName = loadingRoomName;
                 player.Unpause();
+                player.Teleport(room.GetDoorSpawn(priorRoomName));
+                player.SetDraw(room.draw);
+                priorRoomName = loadingRoomName;
+
+                lastSpawn = player.transform.position;
 
                 waitingOnRoomLoad = false;
 
@@ -76,6 +92,10 @@ public class RoomController : MonoBehaviour
                 return;
             }
         }
-        
+    }
+
+    public Vector3 GetLastSpawn()
+    {
+        return lastSpawn;
     }
 }

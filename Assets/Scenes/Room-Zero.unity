@@ -170,8 +170,15 @@ MonoBehaviour:
   - name: Start
     prefab: {fileID: 245790904020596937, guid: cf49ca211f522c3498f4a105b0b67efd, type: 3}
   - name: Tutorial
-    prefab: {fileID: 5771146371057250734, guid: 87fe4b025e0ed9940af964bd13d24ec1, type: 3}
-  startRoomName: Tutorial
+    prefab: {fileID: 5771146371057250734, guid: f263b9fe1289a344eb672d2ce8bc6509, type: 3}
+  - name: Level-0
+    prefab: {fileID: 5771146371057250734, guid: 0da6ed0b734eed34ca519a6ffed9fbec, type: 3}
+  - name: Level-1
+    prefab: {fileID: 5771146371057250734, guid: 44e23583456c80742a17c86cc586bdfa, type: 3}
+  - name: Level-2
+    prefab: {fileID: 5771146371057250734, guid: 94edd9b35998986438f6bfd631cc1cf5, type: 3}
+  startRoomName: Start
+  priorRoomName: 
   player: {fileID: 750241469}
   confiner: {fileID: 499311781}
   activeRoomTransform: {fileID: 399995378}
@@ -539,6 +546,10 @@ PrefabInstance:
     - target: {fileID: 6604149179551351637, guid: 628bae059b512a044ac4ad82dbaa36bd, type: 3}
       propertyPath: settings.wallRunSpeed
       value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: 6604149179551351637, guid: 628bae059b512a044ac4ad82dbaa36bd, type: 3}
+      propertyPath: settings.deathVelocity
+      value: 40
       objectReference: {fileID: 0}
     - target: {fileID: 6604149179551351637, guid: 628bae059b512a044ac4ad82dbaa36bd, type: 3}
       propertyPath: settings.accelerationTime

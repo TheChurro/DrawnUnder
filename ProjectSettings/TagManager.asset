@@ -5,6 +5,8 @@ TagManager:
   serializedVersion: 2
   tags:
   - Runnable
+  - Kill
+  - Keys
   layers:
   - Default
   - TransparentFX

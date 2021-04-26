@@ -7,7 +7,7 @@ public struct MovementControllerSettings
 {
     #region Run Settings
     public float baseSpeed;
-    public float bailSpeed;
+    public float deathVelocity;
     public float accelerationTime;
     public float skidSpeed;
     public float stopSkiddingSpeed;
@@ -56,7 +56,6 @@ public struct MovementControllerSettings
         vars.skidMaxControl = skidMaxControl;
         vars.skidMinControl = skidMinControl;
         vars.stopSkiddingSpeed = stopSkiddingSpeed;
-        vars.bailSpeed = bailSpeed;
         return vars;
     }
 
@@ -80,6 +79,7 @@ public struct MovementControllerSettings
 
         vars.coyoteTolerance = coyoteFrames * Time.fixedDeltaTime;
         vars.inputTolerance = jumpBuffer * Time.fixedDeltaTime;
+        vars.deathVelocity = deathVelocity;
         return vars;
     }
 
@@ -164,6 +164,7 @@ public struct JumpVars
     public float minGravity;
     public float maxGravity;
     public float launchSpeed;
+    public float deathVelocity;
 
     public float coyoteTolerance;
     public float inputTolerance;
